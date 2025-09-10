@@ -1,32 +1,33 @@
-# Streamlit Market Trend Analyzer
+# Market Trend Analyzer
 
-A simple Streamlit app to analyze stock/crypto market trends with common indicators (SMA, EMA, RSI, MACD), 
-a basic moving-average crossover backtest, and interactive charts.
+This is a Streamlit app that fetches market data from multiple sources, computes common technical indicators (SMA, EMA, RSI, MACD), runs a simple MA crossover backtest, and displays interactive charts.
 
-## Quickstart
+## Setup
 
-```bash
-# 1) Create & activate a virtualenv (recommended)
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
+1. Create a virtual environment (recommended)
+   ```
+   python -m venv .venv
+   source .venv/bin/activate  # mac/linux
+   .venv\Scripts\activate   # windows
+   ```
 
-# 2) Install dependencies
-pip install -r requirements.txt
+2. Install dependencies
+   ```
+   pip install -r requirements.txt
+   ```
 
-# 3) Run the app
-streamlit run app.py
-```
+3. (Optional) Add API keys to `.streamlit/secrets.toml`:
+   ```
+   [api_keys]
+   alpha = "YOUR_ALPHA_VANTAGE_KEY"
+   polygon = "YOUR_POLYGON_KEY"
+   finnhub = "YOUR_FINNHUB_KEY"
+   ```
 
-## Features
-- Ticker lookup via Yahoo Finance (yfinance)
-- Date range and interval selection
-- SMA/EMA overlays
-- RSI & MACD indicator panels
-- Simple MA crossover backtest (fast vs slow)
-- Metrics: CAGR (approx), Max Drawdown, Win Rate, Sharpe (naive)
-- Export signals & equity curve as CSV
+4. Run the app
+   ```
+   streamlit run app.py
+   ```
 
-> Note: This app is for educational purposes only and not financial advice.
+## Project structure
+See the repository tree for modularized code: `data_sources`, `indicators`, `backtest`, `utils`, `config`.

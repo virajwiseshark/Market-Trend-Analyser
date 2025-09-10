@@ -29,12 +29,42 @@ if source == "Alpha Vantage":
 
 st.sidebar.markdown('---')
 st.sidebar.subheader("Indicators")
-sma_window = st.sidebar.number_input("SMA window", min_value=2, max_value=400, value=20, step=1)
-ema_window = st.sidebar.number_input("EMA window", min_value=2, max_value=400, value=50, step=1)
-rsi_window = st.sidebar.number_input("RSI window", min_value=2, max_value=100, value=14, step=1)
-macd_fast = st.sidebar.number_input("MACD fast", min_value=2, max_value=100, value=12, step=1)
-macd_slow = st.sidebar.number_input("MACD slow", min_value=2, max_value=200, value=26, step=1)
-macd_signal = st.sidebar.number_input("MACD signal", min_value=2, max_value=50, value=9, step=1)
+
+sma_window = st.sidebar.number_input(
+    "SMA window",
+    min_value=2, max_value=400, value=20, step=1,
+    help="Simple Moving Average: averages closing prices over a set number of days."
+)
+
+ema_window = st.sidebar.number_input(
+    "EMA window",
+    min_value=2, max_value=400, value=50, step=1,
+    help="Exponential Moving Average: weighted average that reacts faster to price changes."
+)
+
+rsi_window = st.sidebar.number_input(
+    "RSI window",
+    min_value=2, max_value=100, value=14, step=1,
+    help="Relative Strength Index: measures momentum, values above 70 = overbought, below 30 = oversold."
+)
+
+macd_fast = st.sidebar.number_input(
+    "MACD fast",
+    min_value=2, max_value=100, value=12, step=1,
+    help="MACD fast EMA period (commonly 12)."
+)
+
+macd_slow = st.sidebar.number_input(
+    "MACD slow",
+    min_value=2, max_value=200, value=26, step=1,
+    help="MACD slow EMA period (commonly 26)."
+)
+
+macd_signal = st.sidebar.number_input(
+    "MACD signal",
+    min_value=2, max_value=50, value=9, step=1,
+    help="Signal line: EMA of MACD, commonly 9 periods."
+)
 
 st.sidebar.markdown('---')
 st.sidebar.subheader("Backtest (MA Crossover)")
@@ -76,13 +106,13 @@ for ticker in tickers:
 
     st.header(f"📊 {ticker} Analysis")
 
-    st.subheader(f"{ticker} Price with SMA/EMA  —  Source: {source}")
+    st.subheader(f"{ticker} Price with Simple & Exponential Moving Averages")
     st.plotly_chart(plot_price(data, sma_window, ema_window), use_container_width=True)
 
-    st.subheader("RSI")
+    st.subheader("Relative Strength Index (RSI)")
     st.plotly_chart(plot_rsi(data, rsi_window), use_container_width=True)
 
-    st.subheader("MACD")
+    st.subheader("Moving Average Convergence Divergence (MACD)")
     st.plotly_chart(plot_macd(data), use_container_width=True)
 
     bt = run_crossover(data, fast_ma=fast_ma, slow_ma=slow_ma, initial_capital=initial_capital)

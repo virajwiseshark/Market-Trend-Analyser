@@ -1,0 +1,34 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Streamlit secrets (don’t push API keys!)
+.streamlit/secrets.toml
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# VSCode / PyCharm configs
+.vscode/
+.idea/
+
+# Local data/cache
+*.sqlite3
+*.db
+.cache/

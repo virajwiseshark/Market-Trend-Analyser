@@ -117,6 +117,7 @@ for ticker in tickers:
                 name="Actual"
             )
             df_preds = pd.concat([actual_series, preds_series], axis=1)
+            st.subheader("📉 Actual vs Predicted (LSTM)")
             st.line_chart(df_preds)
 
             # Future forecast (7 days)
@@ -133,18 +134,21 @@ for ticker in tickers:
                 name="Actual"
             )
             df_preds = pd.concat([actual_series, preds_series], axis=1)
+            st.subheader("📉 Actual vs Predicted (Transformer)")
             st.line_chart(df_preds)
         elif ai_model_choice == "Linear Regression":
             _, preds = train_linear_regression(data)
             preds_series = pd.Series(preds, index=data.index, name="Predicted")
             actual_series = data["Close"].rename("Actual")
             df_preds = pd.concat([actual_series, preds_series], axis=1)
+            st.subheader("📉 Actual vs Predicted (Linear Regression)")
             st.line_chart(df_preds)
         elif ai_model_choice == "Random Forest":
             _, preds = train_random_forest(data)
             preds_series = pd.Series(preds, index=data.index, name="Predicted")
             actual_series = data["Close"].rename("Actual")
             df_preds = pd.concat([actual_series, preds_series], axis=1)
+            st.subheader("📉 Actual vs Predicted (Random Forest)")
             st.line_chart(df_preds)
 
     st.download_button(f"Download {ticker} indicators CSV", data=data.to_csv().encode('utf-8'), file_name=f"{ticker}_indicators.csv", mime='text/csv')

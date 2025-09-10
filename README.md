@@ -1,11 +1,7 @@
-# Market Trend Analyzer
-
-This is a Streamlit app that fetches market data from multiple sources, computes common technical indicators (SMA, EMA, RSI, MACD), runs a simple MA crossover backtest, and displays interactive charts.
-
-
 # 📈 Market Trend Analyzer
 
 An interactive financial analysis and backtesting tool built with **Python, Streamlit, and Plotly**.  
+This is an app that fetches market data from multiple sources, computes common technical indicators (SMA, EMA, RSI, MACD), runs a simple MA crossover backtest, and displays interactive charts.
 It supports **multi-stock analysis** (US & Indian markets), technical indicators, backtesting, and now **AI-powered predictions**.
 
 ---

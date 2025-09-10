@@ -7,6 +7,11 @@ from backtest.strategies import run_crossover, compute_metrics
 from data_sources import yahoo, alpha_vantage, polygon, finnhub
 from utils.plotting import plot_price, plot_rsi, plot_macd, plot_equity
 
+# Import AI models
+from ml_models.lstm_model import train_lstm
+from ml_models.transformer_model import train_transformer
+from ml_models.baseline_models import train_linear_regression, train_random_forest
+
 st.set_page_config(page_title="Market Trend Analyzer", layout="wide")
 st.sidebar.title("Market Trend Analyzer")
 
@@ -30,47 +35,22 @@ if source == "Alpha Vantage":
 st.sidebar.markdown('---')
 st.sidebar.subheader("Indicators")
 
-sma_window = st.sidebar.number_input(
-    "SMA window",
-    min_value=2, max_value=400, value=20, step=1,
-    help="Simple Moving Average: averages closing prices over a set number of days."
-)
-
-ema_window = st.sidebar.number_input(
-    "EMA window",
-    min_value=2, max_value=400, value=50, step=1,
-    help="Exponential Moving Average: weighted average that reacts faster to price changes."
-)
-
-rsi_window = st.sidebar.number_input(
-    "RSI window",
-    min_value=2, max_value=100, value=14, step=1,
-    help="Relative Strength Index: measures momentum, values above 70 = overbought, below 30 = oversold."
-)
-
-macd_fast = st.sidebar.number_input(
-    "MACD fast",
-    min_value=2, max_value=100, value=12, step=1,
-    help="MACD fast EMA period (commonly 12)."
-)
-
-macd_slow = st.sidebar.number_input(
-    "MACD slow",
-    min_value=2, max_value=200, value=26, step=1,
-    help="MACD slow EMA period (commonly 26)."
-)
-
-macd_signal = st.sidebar.number_input(
-    "MACD signal",
-    min_value=2, max_value=50, value=9, step=1,
-    help="Signal line: EMA of MACD, commonly 9 periods."
-)
+sma_window = st.sidebar.number_input("SMA window", min_value=2, max_value=400, value=20, step=1, help="Simple Moving Average: averages closing prices.")
+ema_window = st.sidebar.number_input("EMA window", min_value=2, max_value=400, value=50, step=1, help="Exponential Moving Average: reacts faster to price changes.")
+rsi_window = st.sidebar.number_input("RSI window", min_value=2, max_value=100, value=14, step=1, help="Relative Strength Index: momentum indicator.")
+macd_fast = st.sidebar.number_input("MACD fast", min_value=2, max_value=100, value=12, step=1, help="MACD fast EMA period.")
+macd_slow = st.sidebar.number_input("MACD slow", min_value=2, max_value=200, value=26, step=1, help="MACD slow EMA period.")
+macd_signal = st.sidebar.number_input("MACD signal", min_value=2, max_value=50, value=9, step=1, help="MACD signal line EMA.")
 
 st.sidebar.markdown('---')
 st.sidebar.subheader("Backtest (MA Crossover)")
 fast_ma = st.sidebar.number_input("Fast MA", min_value=2, max_value=200, value=10, step=1)
 slow_ma = st.sidebar.number_input("Slow MA", min_value=2, max_value=400, value=30, step=1)
 initial_capital = st.sidebar.number_input("Initial Capital", min_value=1000, value=10000, step=500)
+
+st.sidebar.markdown('---')
+st.sidebar.subheader("AI Predictions")
+ai_model_choice = st.sidebar.selectbox("Choose AI Model", ["None", "LSTM", "Transformer", "Linear Regression", "Random Forest"])
 
 if st.sidebar.button("Load / Refresh Data", use_container_width=True):
     st.session_state["data_loaded"] = True
@@ -135,6 +115,22 @@ for ticker in tickers:
     else:
         signal = "FLAT"
     st.info(f"Latest signal: {signal}  |  fast={latest['fast']:.2f}, slow={latest['slow']:.2f}")
+
+    # AI Predictions
+    if ai_model_choice != "None":
+        st.subheader(f"AI Prediction using {ai_model_choice}")
+        if ai_model_choice == "LSTM":
+            _, preds, _ = train_lstm(data)
+            st.line_chart({"Actual": data["Close"].iloc[-len(preds):], "Predicted": preds})
+        elif ai_model_choice == "Transformer":
+            _, preds, _ = train_transformer(data)
+            st.line_chart({"Actual": data["Close"].iloc[-len(preds):], "Predicted": preds})
+        elif ai_model_choice == "Linear Regression":
+            _, preds = train_linear_regression(data)
+            st.line_chart({"Actual": data["Close"], "Predicted": preds})
+        elif ai_model_choice == "Random Forest":
+            _, preds = train_random_forest(data)
+            st.line_chart({"Actual": data["Close"], "Predicted": preds})
 
     st.download_button(f"Download {ticker} indicators CSV", data=data.to_csv().encode('utf-8'), file_name=f"{ticker}_indicators.csv", mime='text/csv')
     export_cols = ['Close','fast','slow','signal','position','returns','strategy','equity']

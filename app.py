@@ -111,7 +111,11 @@ for ticker in tickers:
         if ai_model_choice == "LSTM":
             model, preds, scaler = train_lstm(data)
             preds_series = pd.Series(preds, index=data.index[-len(preds):], name="Predicted")
-            actual_series = data["Close"].iloc[-len(preds):].rename("Actual")
+            actual_series = pd.Series(
+                data["Close"].iloc[-len(preds):].values,
+                index=data.index[-len(preds):],
+                name="Actual"
+            )
             df_preds = pd.concat([actual_series, preds_series], axis=1)
             st.line_chart(df_preds)
 
@@ -123,7 +127,11 @@ for ticker in tickers:
         elif ai_model_choice == "Transformer":
             _, preds, _ = train_transformer(data)
             preds_series = pd.Series(preds, index=data.index[-len(preds):], name="Predicted")
-            actual_series = data["Close"].iloc[-len(preds):].rename("Actual")
+            actual_series = pd.Series(
+                data["Close"].iloc[-len(preds):].values,
+                index=data.index[-len(preds):],
+                name="Actual"
+            )
             df_preds = pd.concat([actual_series, preds_series], axis=1)
             st.line_chart(df_preds)
         elif ai_model_choice == "Linear Regression":

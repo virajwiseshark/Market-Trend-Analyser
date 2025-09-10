@@ -54,10 +54,11 @@ cd Market-Trend-Analyser
 
 3. (Optional) Add API keys to `.streamlit/secrets.toml`:
    ```
-   [api_keys]
-   alpha = "YOUR_ALPHA_VANTAGE_KEY"
-   polygon = "YOUR_POLYGON_KEY"
-   finnhub = "YOUR_FINNHUB_KEY"
+[api_keys]
+# alpha = "PJCGITJGIOOXMWRH"
+# polygon = "GOSRiQEYnbJE8fsA5JQoVj8MqbbZpeyV"
+# finnhub = "d30obdpr01qnu2quuelgd30obdpr01qnu2quuem0"
+
    ```
 
 4. Run the app

@@ -4,3 +4,6 @@ numpy
 yfinance
 plotly
 alpha_vantage
+scikit-learn
+tensorflow
+torch

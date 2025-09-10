@@ -110,20 +110,34 @@ for ticker in tickers:
         st.subheader(f"AI Prediction using {ai_model_choice}")
         if ai_model_choice == "LSTM":
             model, preds, scaler = train_lstm(data)
-            st.line_chart({"Actual": data["Close"].iloc[-len(preds):], "Predicted": preds})
+            preds_series = pd.Series(preds, index=data.index[-len(preds):], name="Predicted")
+            actual_series = data["Close"].iloc[-len(preds):].rename("Actual")
+            df_preds = pd.concat([actual_series, preds_series], axis=1)
+            st.line_chart(df_preds)
+
             # Future forecast (7 days)
             future_preds = predict_future_lstm(model, data["Close"], scaler, lookback=60, days=7)
+            future_series = pd.Series(future_preds, index=pd.RangeIndex(len(future_preds)), name="Future")
             st.subheader("📈 LSTM Future Forecast (Next 7 Days)")
-            st.line_chart({"Future": future_preds})
+            st.line_chart(future_series)
         elif ai_model_choice == "Transformer":
             _, preds, _ = train_transformer(data)
-            st.line_chart({"Actual": data["Close"].iloc[-len(preds):], "Predicted": preds})
+            preds_series = pd.Series(preds, index=data.index[-len(preds):], name="Predicted")
+            actual_series = data["Close"].iloc[-len(preds):].rename("Actual")
+            df_preds = pd.concat([actual_series, preds_series], axis=1)
+            st.line_chart(df_preds)
         elif ai_model_choice == "Linear Regression":
             _, preds = train_linear_regression(data)
-            st.line_chart({"Actual": data["Close"], "Predicted": preds})
+            preds_series = pd.Series(preds, index=data.index, name="Predicted")
+            actual_series = data["Close"].rename("Actual")
+            df_preds = pd.concat([actual_series, preds_series], axis=1)
+            st.line_chart(df_preds)
         elif ai_model_choice == "Random Forest":
             _, preds = train_random_forest(data)
-            st.line_chart({"Actual": data["Close"], "Predicted": preds})
+            preds_series = pd.Series(preds, index=data.index, name="Predicted")
+            actual_series = data["Close"].rename("Actual")
+            df_preds = pd.concat([actual_series, preds_series], axis=1)
+            st.line_chart(df_preds)
 
     st.download_button(f"Download {ticker} indicators CSV", data=data.to_csv().encode('utf-8'), file_name=f"{ticker}_indicators.csv", mime='text/csv')
     export_cols = ['Close','fast','slow','signal','position','returns','strategy','equity']

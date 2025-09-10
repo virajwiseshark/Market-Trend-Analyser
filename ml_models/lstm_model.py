@@ -26,7 +26,26 @@ def train_lstm(data, feature="Close", lookback=60, epochs=5, batch_size=32):
     model.compile(optimizer='adam', loss='mean_squared_error')
     model.fit(X, y, epochs=epochs, batch_size=batch_size, verbose=0)
 
-    preds = model.predict(X)
+    preds = model.predict(X, verbose=0)
     preds = scaler.inverse_transform(preds)
 
     return model, preds.flatten(), scaler
+
+
+def predict_future_lstm(model, data, scaler, lookback=60, days=7):
+    """
+    Predict future stock prices for 'days' ahead using trained LSTM.
+    """
+    last_data = data[-lookback:].values.reshape(-1, 1)
+    scaled_last = scaler.transform(last_data)
+
+    seq = scaled_last.reshape(1, lookback, 1)
+    predictions = []
+
+    for _ in range(days):
+        pred = model.predict(seq, verbose=0)[0][0]
+        predictions.append(pred)
+        seq = np.append(seq[:, 1:, :], [[[pred]]], axis=1)
+
+    predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1))
+    return predictions.flatten()

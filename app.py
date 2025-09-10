@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
-from config.settings import DEFAULT_TICKER, DEFAULT_INTERVAL, DEFAULT_START_DAYS
+from config.settings import DEFAULT_INTERVAL, DEFAULT_START_DAYS
 from indicators.technicals import compute_indicators
 from backtest.strategies import run_crossover, compute_metrics
 from data_sources import yahoo, alpha_vantage, polygon, finnhub
 from utils.plotting import plot_price, plot_rsi, plot_macd, plot_equity
 
 # Import AI models
-from ml_models.lstm_model import train_lstm
+from ml_models.lstm_model import train_lstm, predict_future_lstm
 from ml_models.transformer_model import train_transformer
 from ml_models.baseline_models import train_linear_regression, train_random_forest
 
@@ -25,32 +25,24 @@ start = col1.date_input("Start", value=date.today() - timedelta(days=DEFAULT_STA
 end = col2.date_input("End", value=date.today())
 interval = st.sidebar.selectbox("Interval", DEFAULT_INTERVAL, index=0)
 
-# API key input for Alpha Vantage (optional; also support st.secrets)
-alpha_api_key = ""
-if source == "Alpha Vantage":
-    alpha_api_key = st.sidebar.text_input("Alpha Vantage API Key", value=st.secrets.get('api_keys', {}).get('alpha','') if st.secrets.get('api_keys',{}) else "", type="password")
-    if not alpha_api_key:
-        st.sidebar.info("Alpha Vantage API key required for this source. Put it in the field or in .streamlit/secrets.toml")
+# --- AI Predictions block moved above Indicators ---
+st.sidebar.subheader("AI Predictions")
+ai_model_choice = st.sidebar.selectbox("Choose AI Model", ["None", "LSTM", "Transformer", "Linear Regression", "Random Forest"])
 
 st.sidebar.markdown('---')
 st.sidebar.subheader("Indicators")
-
-sma_window = st.sidebar.number_input("SMA window", min_value=2, max_value=400, value=20, step=1, help="Simple Moving Average: averages closing prices.")
-ema_window = st.sidebar.number_input("EMA window", min_value=2, max_value=400, value=50, step=1, help="Exponential Moving Average: reacts faster to price changes.")
-rsi_window = st.sidebar.number_input("RSI window", min_value=2, max_value=100, value=14, step=1, help="Relative Strength Index: momentum indicator.")
-macd_fast = st.sidebar.number_input("MACD fast", min_value=2, max_value=100, value=12, step=1, help="MACD fast EMA period.")
-macd_slow = st.sidebar.number_input("MACD slow", min_value=2, max_value=200, value=26, step=1, help="MACD slow EMA period.")
-macd_signal = st.sidebar.number_input("MACD signal", min_value=2, max_value=50, value=9, step=1, help="MACD signal line EMA.")
+sma_window = st.sidebar.number_input("SMA window", min_value=2, max_value=400, value=20, step=1)
+ema_window = st.sidebar.number_input("EMA window", min_value=2, max_value=400, value=50, step=1)
+rsi_window = st.sidebar.number_input("RSI window", min_value=2, max_value=100, value=14, step=1)
+macd_fast = st.sidebar.number_input("MACD fast", min_value=2, max_value=100, value=12, step=1)
+macd_slow = st.sidebar.number_input("MACD slow", min_value=2, max_value=200, value=26, step=1)
+macd_signal = st.sidebar.number_input("MACD signal", min_value=2, max_value=50, value=9, step=1)
 
 st.sidebar.markdown('---')
 st.sidebar.subheader("Backtest (MA Crossover)")
 fast_ma = st.sidebar.number_input("Fast MA", min_value=2, max_value=200, value=10, step=1)
 slow_ma = st.sidebar.number_input("Slow MA", min_value=2, max_value=400, value=30, step=1)
 initial_capital = st.sidebar.number_input("Initial Capital", min_value=1000, value=10000, step=500)
-
-st.sidebar.markdown('---')
-st.sidebar.subheader("AI Predictions")
-ai_model_choice = st.sidebar.selectbox("Choose AI Model", ["None", "LSTM", "Transformer", "Linear Regression", "Random Forest"])
 
 if st.sidebar.button("Load / Refresh Data", use_container_width=True):
     st.session_state["data_loaded"] = True
@@ -67,11 +59,11 @@ for ticker in tickers:
         if source == "Yahoo Finance":
             df = yahoo.load_data(ticker, start, end, interval)
         elif source == "Alpha Vantage":
-            df = alpha_vantage.load_data(ticker, start, end, interval, api_key=alpha_api_key)
+            df = alpha_vantage.load_data(ticker, start, end, interval, api_key=st.secrets.get("api_keys", {}).get("alpha",""))
         elif source.startswith("Polygon"):
-            df = polygon.load_data(ticker, start, end, interval, api_key=st.secrets.get('api_keys',{}).get('polygon',''))
+            df = polygon.load_data(ticker, start, end, interval, api_key=st.secrets.get("api_keys",{}).get("polygon",""))
         elif source.startswith("Finnhub"):
-            df = finnhub.load_data(ticker, start, end, interval, api_key=st.secrets.get('api_keys',{}).get('finnhub',''))
+            df = finnhub.load_data(ticker, start, end, interval, api_key=st.secrets.get("api_keys",{}).get("finnhub",""))
         else:
             df = pd.DataFrame()
     else:
@@ -106,22 +98,23 @@ for ticker in tickers:
     c3.metric("CAGR (approx.)", f"{metrics['cagr']:.2%}" if not pd.isna(metrics['cagr']) else "n/a")
     c4.metric("Win Rate", f"{metrics['win_rate']:.1%}" if not pd.isna(metrics['win_rate']) else "n/a")
 
-    latest = bt.iloc[-1][['fast','slow','position']]
-    pos = float(latest['position'])
-    if pos > 0:
-        signal = "LONG"
-    elif pos < 0:
-        signal = "SHORT"
-    else:
-        signal = "FLAT"
-    st.info(f"Latest signal: {signal}  |  fast={latest['fast']:.2f}, slow={latest['slow']:.2f}")
+    # --- Safe handling of latest signal ---
+    latest = bt.iloc[-1].to_dict()
+    fast_val = latest.get("fast", float("nan"))
+    slow_val = latest.get("slow", float("nan"))
+    signal = "LONG" if latest.get("position", 0) > 0 else ("SHORT" if latest.get("position", 0) < 0 else "FLAT")
+    st.info(f"Latest signal: {signal} | fast={fast_val if pd.notna(fast_val) else 'n/a'}, slow={slow_val if pd.notna(slow_val) else 'n/a'}")
 
-    # AI Predictions
+    # --- AI Predictions ---
     if ai_model_choice != "None":
         st.subheader(f"AI Prediction using {ai_model_choice}")
         if ai_model_choice == "LSTM":
-            _, preds, _ = train_lstm(data)
+            model, preds, scaler = train_lstm(data)
             st.line_chart({"Actual": data["Close"].iloc[-len(preds):], "Predicted": preds})
+            # Future forecast (7 days)
+            future_preds = predict_future_lstm(model, data["Close"], scaler, lookback=60, days=7)
+            st.subheader("📈 LSTM Future Forecast (Next 7 Days)")
+            st.line_chart({"Future": future_preds})
         elif ai_model_choice == "Transformer":
             _, preds, _ = train_transformer(data)
             st.line_chart({"Actual": data["Close"].iloc[-len(preds):], "Predicted": preds})

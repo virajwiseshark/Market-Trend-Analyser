@@ -12,7 +12,9 @@ st.sidebar.title("Market Trend Analyzer")
 
 # --- Sidebar: data source & basic inputs ---
 source = st.sidebar.selectbox("Data Source", ["Yahoo Finance", "Alpha Vantage", "Polygon (placeholder)", "Finnhub (placeholder)"])
-ticker = st.sidebar.text_input("Ticker (symbol)", DEFAULT_TICKER)
+tickers_input = st.sidebar.text_input("Tickers (comma-separated)", "AAPL, RELIANCE.NS")
+tickers = [t.strip().upper() for t in tickers_input.split(",") if t.strip()]
+
 col1, col2 = st.sidebar.columns(2)
 start = col1.date_input("Start", value=date.today() - timedelta(days=DEFAULT_START_DAYS))
 end = col2.date_input("End", value=date.today())
@@ -46,62 +48,67 @@ if st.sidebar.button("Load / Refresh Data", use_container_width=True):
 if "data_loaded" not in st.session_state:
     st.session_state["data_loaded"] = True
 
-# --- Load data based on selected source ---
-if st.session_state["data_loaded"]:
-    if source == "Yahoo Finance":
-        df = yahoo.load_data(ticker, start, end, interval)
-    elif source == "Alpha Vantage":
-        df = alpha_vantage.load_data(ticker, start, end, interval, api_key=alpha_api_key)
-    elif source.startswith("Polygon"):
-        df = polygon.load_data(ticker, start, end, interval, api_key=st.secrets.get('api_keys',{}).get('polygon',''))
-    elif source.startswith("Finnhub"):
-        df = finnhub.load_data(ticker, start, end, interval, api_key=st.secrets.get('api_keys',{}).get('finnhub',''))
-    else:
-        df = pd.DataFrame()
-else:
-    df = pd.DataFrame()
-
 st.title("📈 Market Trend Analyzer")
 st.caption("Educational demo. Not investment advice.")
 
-if df.empty:
-    st.warning("No data. Check ticker, date range, API key, or chosen data source.")
-    st.stop()
+# --- Loop through tickers ---
+for ticker in tickers:
+    if st.session_state["data_loaded"]:
+        if source == "Yahoo Finance":
+            df = yahoo.load_data(ticker, start, end, interval)
+        elif source == "Alpha Vantage":
+            df = alpha_vantage.load_data(ticker, start, end, interval, api_key=alpha_api_key)
+        elif source.startswith("Polygon"):
+            df = polygon.load_data(ticker, start, end, interval, api_key=st.secrets.get('api_keys',{}).get('polygon',''))
+        elif source.startswith("Finnhub"):
+            df = finnhub.load_data(ticker, start, end, interval, api_key=st.secrets.get('api_keys',{}).get('finnhub',''))
+        else:
+            df = pd.DataFrame()
+    else:
+        df = pd.DataFrame()
 
-# --- Compute indicators ---
-data = compute_indicators(df, sma=sma_window, ema=ema_window, rsi=rsi_window,
-                          macd_fast=macd_fast, macd_slow=macd_slow, macd_signal=macd_signal)
+    if df.empty:
+        st.warning(f"No data for {ticker}. Check ticker, date range, API key, or chosen data source.")
+        continue
 
-# --- Plot price and indicators ---
-st.subheader(f"{ticker} Price with SMA/EMA  —  Source: {source}")
-st.plotly_chart(plot_price(data, sma_window, ema_window), use_container_width=True)
+    data = compute_indicators(df, sma=sma_window, ema=ema_window, rsi=rsi_window,
+                              macd_fast=macd_fast, macd_slow=macd_slow, macd_signal=macd_signal)
 
-st.subheader("RSI")
-st.plotly_chart(plot_rsi(data, rsi_window), use_container_width=True)
+    st.header(f"📊 {ticker} Analysis")
 
-st.subheader("MACD")
-st.plotly_chart(plot_macd(data), use_container_width=True)
+    st.subheader(f"{ticker} Price with SMA/EMA  —  Source: {source}")
+    st.plotly_chart(plot_price(data, sma_window, ema_window), use_container_width=True)
 
-# --- Backtest ---
-bt = run_crossover(data, fast_ma=fast_ma, slow_ma=slow_ma, initial_capital=initial_capital)
+    st.subheader("RSI")
+    st.plotly_chart(plot_rsi(data, rsi_window), use_container_width=True)
 
-st.subheader("Backtest Equity Curve")
-st.plotly_chart(plot_equity(bt), use_container_width=True)
+    st.subheader("MACD")
+    st.plotly_chart(plot_macd(data), use_container_width=True)
 
-metrics = compute_metrics(bt)
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Final Equity", f"${bt['equity'].iloc[-1]:,.2f}")
-c2.metric("Max Drawdown", f"{metrics['max_drawdown']:.2%}" if not pd.isna(metrics['max_drawdown']) else "n/a")
-c3.metric("CAGR (approx.)", f"{metrics['cagr']:.2%}" if not pd.isna(metrics['cagr']) else "n/a")
-c4.metric("Win Rate", f"{metrics['win_rate']:.1%}" if not pd.isna(metrics['win_rate']) else "n/a")
+    bt = run_crossover(data, fast_ma=fast_ma, slow_ma=slow_ma, initial_capital=initial_capital)
+    st.subheader("Backtest Equity Curve")
+    st.plotly_chart(plot_equity(bt), use_container_width=True)
 
-latest = bt.iloc[-1][['fast','slow','position']]
-st.info(f"Latest signal: {'LONG' if latest['position']>0 else ('SHORT' if latest['position']<0 else 'FLAT')}  |  fast={latest['fast']:.2f}, slow={latest['slow']:.2f}")
+    metrics = compute_metrics(bt)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Final Equity", f"${bt['equity'].iloc[-1]:,.2f}")
+    c2.metric("Max Drawdown", f"{metrics['max_drawdown']:.2%}" if not pd.isna(metrics['max_drawdown']) else "n/a")
+    c3.metric("CAGR (approx.)", f"{metrics['cagr']:.2%}" if not pd.isna(metrics['cagr']) else "n/a")
+    c4.metric("Win Rate", f"{metrics['win_rate']:.1%}" if not pd.isna(metrics['win_rate']) else "n/a")
 
-# --- Downloads ---
-st.download_button("Download price & indicators CSV", data=data.to_csv().encode('utf-8'), file_name=f"{ticker}_indicators.csv", mime='text/csv')
-export_cols = ['Close','fast','slow','signal','position','returns','strategy','equity']
-export_existing = [c for c in export_cols if c in bt.columns]
-st.download_button("Download backtest CSV", data=bt[export_existing].to_csv().encode('utf-8'), file_name=f"{ticker}_backtest.csv", mime='text/csv')
+    latest = bt.iloc[-1][['fast','slow','position']]
+    pos = float(latest['position'])
+    if pos > 0:
+        signal = "LONG"
+    elif pos < 0:
+        signal = "SHORT"
+    else:
+        signal = "FLAT"
+    st.info(f"Latest signal: {signal}  |  fast={latest['fast']:.2f}, slow={latest['slow']:.2f}")
 
-st.caption(f"Built with Streamlit, yfinance, plotly. Data source: {source}. Educational use only.")
+    st.download_button(f"Download {ticker} indicators CSV", data=data.to_csv().encode('utf-8'), file_name=f"{ticker}_indicators.csv", mime='text/csv')
+    export_cols = ['Close','fast','slow','signal','position','returns','strategy','equity']
+    export_existing = [c for c in export_cols if c in bt.columns]
+    st.download_button(f"Download {ticker} backtest CSV", data=bt[export_existing].to_csv().encode('utf-8'), file_name=f"{ticker}_backtest.csv", mime='text/csv')
+
+    st.markdown("---")
